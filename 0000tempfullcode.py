@@ -37,7 +37,7 @@ DB_FILE = "inventory.db"
 LOG_DIR = "logs"
 LOG_FILE = "scan.log"
 
-DRIVE_KEY_FILENAME = ".inventory_drive_key"
+DRIVE_KEY_FILENAME = ".__MUSIC_ARCHIVE_DRIVE_ID"
 
 SUPPORTED_EXTENSIONS = {
     ".mp3",
