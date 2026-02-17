@@ -4,30 +4,53 @@ from datetime import datetime
 from config import LOG_DIR, LOG_FILE
 
 
-def ensure_log_dir():
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR)
+# --------------------------------------------------
+# Logging Setup
+# --------------------------------------------------
+
+def ensure_directory(path: str):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 
 def setup_logging():
-    ensure_log_dir()
+    ensure_directory(LOG_DIR)
+
     log_path = os.path.join(LOG_DIR, LOG_FILE)
 
     logging.basicConfig(
-        filename=log_path,
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(message)s",
+        handlers=[
+            logging.FileHandler(log_path, encoding="utf-8"),
+            logging.StreamHandler()
+        ]
     )
 
-    logging.getLogger().addHandler(logging.StreamHandler())
+    logging.info("=== InventoryCollator Scan Started ===")
 
 
-def generate_timestamp():
-    return datetime.utcnow().isoformat()
+# --------------------------------------------------
+# Time Utilities
+# --------------------------------------------------
+
+def utc_now():
+    return datetime.utcnow().isoformat(timespec="seconds")
 
 
-def human_size(size):
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
+# --------------------------------------------------
+# Size Formatting
+# --------------------------------------------------
+
+def human_readable_size(size_bytes: int) -> str:
+    if size_bytes is None:
+        return "0 B"
+
+    size = float(size_bytes)
+
+    for unit in ["B", "KB", "MB", "GB", "TB", "PB"]:
         if size < 1024:
             return f"{size:.2f} {unit}"
         size /= 1024
+
+    return f"{size:.2f} EB"

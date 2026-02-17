@@ -1,36 +1,67 @@
-import os
-
-try:
-    from mutagen import File as MutagenFile
-except:
-    MutagenFile = None
+import logging
+from mutagen import File as MutagenFile
 
 
-def extract_metadata(filepath):
-    metadata = {
-        "title": None,
-        "artist": None,
-        "album": None,
-        "duration": None,
-        "bitrate": None,
+def extract_audio_metadata(file_path: str) -> dict | None:
+    """
+    Extracts audio metadata using mutagen.
+
+    Returns dictionary:
+    {
+        duration,
+        bitrate,
+        sample_rate,
+        channels,
+        artist,
+        album,
+        title,
+        year
     }
+    """
 
-    if MutagenFile:
-        try:
-            audio = MutagenFile(filepath)
-            if audio:
-                metadata["duration"] = getattr(audio.info, "length", None)
-                metadata["bitrate"] = getattr(audio.info, "bitrate", None)
+    try:
+        audio = MutagenFile(file_path, easy=True)
 
-                if audio.tags:
-                    metadata["title"] = str(audio.tags.get("TIT2", [None])[0])
-                    metadata["artist"] = str(audio.tags.get("TPE1", [None])[0])
-                    metadata["album"] = str(audio.tags.get("TALB", [None])[0])
-        except:
-            pass
+        if audio is None:
+            return None
 
-    # Fallback: derive from filename
-    if not metadata["title"]:
-        metadata["title"] = os.path.splitext(os.path.basename(filepath))[0]
+        metadata = {
+            "duration": None,
+            "bitrate": None,
+            "sample_rate": None,
+            "channels": None,
+            "artist": None,
+            "album": None,
+            "title": None,
+            "year": None
+        }
 
-    return metadata
+        # Technical info
+        if hasattr(audio, "info") and audio.info:
+            metadata["duration"] = getattr(audio.info, "length", None)
+            metadata["bitrate"] = getattr(audio.info, "bitrate", None)
+            metadata["sample_rate"] = getattr(audio.info, "sample_rate", None)
+            metadata["channels"] = getattr(audio.info, "channels", None)
+
+        # Tags
+        if audio.tags:
+            metadata["artist"] = _safe_get(audio.tags, "artist")
+            metadata["album"] = _safe_get(audio.tags, "album")
+            metadata["title"] = _safe_get(audio.tags, "title")
+            metadata["year"] = _safe_get(audio.tags, "date") or _safe_get(audio.tags, "year")
+
+        return metadata
+
+    except Exception as e:
+        logging.error(f"Metadata extraction failed for {file_path}: {e}")
+        return None
+
+
+def _safe_get(tags, key):
+    try:
+        value = tags.get(key)
+        if isinstance(value, list):
+            return value[0]
+        return value
+    except Exception:
+        return None
